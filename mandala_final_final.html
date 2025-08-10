@@ -1,0 +1,1251 @@
+<!-- <!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mesmeric Mandala — Evolved (Stable)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&family=Orbitron:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#060617; --bg2:#00102a;
+    --accentA:#ff6ec7; --accentB:#2ef0ff;
+    --panel-bg:linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    --panel-border:rgba(255,255,255,0.05);
+  }
+  html,body{height:100%;margin:0;background:var(--bg1);font-family:Inter,system-ui,Arial;color:#fff;overflow:hidden}
+  canvas{display:block}
+  .hint{position:fixed;left:14px;top:12px;font-size:13px;color:rgba(255,255,255,0.85);z-index:999}
+
+  .controls-container{
+    position:fixed;
+    left:12px; bottom:12px;
+    z-index:1000;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  #toggleControls{
+    margin-bottom:8px;
+    padding:8px 16px;
+  }
+  .panel{
+    display:flex; gap:12px; align-items:stretch;
+    padding:10px 14px; border-radius:14px;
+    background:var(--panel-bg);
+    backdrop-filter: blur(10px) saturate(120%); box-shadow:0 10px 30px rgba(0,0,0,0.45);
+    border:1px solid var(--panel-border);
+    flex-wrap:wrap;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .controls-hidden .panel{
+      opacity:0;
+      pointer-events:none;
+      transform: translateY(20px);
+  }
+
+  fieldset{
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px;
+    padding:8px 12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  legend{
+    font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;
+    opacity:0.7; padding: 0 4px;
+  }
+
+  .group{display:flex;align-items:center;gap:8px}
+  label{font-size:12px;min-width:68px;opacity:0.9; cursor:help;}
+  input[type=range]{width:130px}
+  .value{font-family:Orbitron,monospace;font-size:12px;min-width:44px;text-align:right}
+
+  button.btn, select{
+    background:linear-gradient(135deg,var(--accentA),var(--accentB));
+    border:none;padding:8px 12px;border-radius:8px;color:#021826;
+    font-weight:700;cursor:pointer; font-family:Inter; font-size:12px;
+  }
+  button.icon{
+    width:38px;height:38px;border-radius:50%;display:inline-grid;place-items:center;
+    padding:0;border:none;cursor:pointer;
+    background:linear-gradient(135deg,var(--accentA),var(--accentB));
+  }
+  input[type=color]{width:36px;height:36px;border-radius:8px;border:none;padding:0;cursor:pointer}
+  .small{font-size:11px;opacity:0.85}
+  @media (max-width:820px){
+    .panel{flex-direction:column; align-items:center;}
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+</head>
+<body>
+  <div class="hint">Mesmeric Mandala Evolved — press <b>H</b> to hide/show controls</div>
+
+  <div class="controls-container" id="controlsContainer">
+    <button class="btn" id="toggleControls">Hide Controls</button>
+    <div class="panel">
+      <fieldset>
+        <legend>Presets & Audio</legend>
+        <div class="group">
+          <label title="Load pre-defined settings">Presets</label>
+          <select id="presets"></select>
+        </div>
+        <div class="group">
+            <label title="Load your own audio file">Audio</label>
+            <input id="file" type="file" accept="audio/*" style="width:130px" />
+        </div>
+        <div class="group">
+            <label title="Start/Stop audio playback">Playback</label>
+            <button class="btn" id="playBtn">Play</button>
+            <button class="icon" id="snap" title="Save image as PNG">📸</button>
+        </div>
+        <div class="group">
+          <label class="small" title="Use your microphone as an audio source">Mic</label>
+          <button class="btn" id="micBtn">Start Mic</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Visual Style</legend>
+        <div class="group">
+          <label title="Choose the main visualizer">Visual</label>
+          <select id="visuals">
+            <option value="mandala">Mandala</option>
+            <option value="particleRing">Particle Ring</option>
+            <option value="rain">Falling Rain</option>
+            <option value="fire">Fire Storm</option>
+          </select>
+        </div>
+        <div class="group">
+            <label title="Choose the background style">Background</label>
+            <select id="background">
+              <option value="gradient">Gradient</option>
+              <option value="starfield">Starfield</option>
+            </select>
+        </div>
+        <div class="group">
+          <label title="Primary color for the visual palette">Palette A</label>
+          <input id="colA" type="color" value="#ff6ec7" />
+        </div>
+        <div class="group">
+          <label title="Secondary color for the visual palette">Palette B</label>
+          <input id="colB" type="color" value="#2ef0ff" />
+        </div>
+      </fieldset>
+
+       <fieldset id="paramsMandala">
+        <legend>Parameters (Mandala)</legend>
+        <div class="group">
+            <label title="Number of rotational symmetries">Symmetry</label>
+            <input id="sym" type="range" min="3" max="36" value="12" />
+            <div class="value" id="symVal">12</div>
+        </div>
+        <div class="group">
+            <label title="Number of concentric layers">Layers</label>
+            <input id="layers" type="range" min="1" max="10" value="5" />
+            <div class="value" id="layersVal">5</div>
+        </div>
+        <div class="group">
+            <label title="Smoothness vs. complexity of shapes">Detail</label>
+            <input id="points" type="range" min="64" max="2048" step="8" value="512" />
+            <div class="value" id="pointsVal">512</div>
+        </div>
+       </fieldset>
+
+       <fieldset id="paramsShared">
+         <legend>Parameters (General)</legend>
+         <div class="group">
+            <label title="Overall animation speed">Speed</label>
+            <input id="speed" type="range" min="0.1" max="3" step="0.05" value="1" />
+            <div class="value" id="speedVal">1.00</div>
+        </div>
+        <div class="group">
+            <label title="How fast the colors cycle">Hue Shift</label>
+            <input id="hueSpeed" type="range" min="0" max="2" step="0.01" value="0.32" />
+            <div class="value" id="hueVal">0.32</div>
+        </div>
+        <div class="group">
+            <label title="Length of the motion trails">Glow</label>
+            <input id="glow" type="range" min="0" max="1" step="0.01" value="0.7" />
+            <div class="value" id="glowVal">0.70</div>
+        </div>
+       </fieldset>
+    </div>
+  </div>
+
+<script>
+// --- Global State ---
+let trailGraphics;
+let fft, audioFile, mic;
+let useMic = false, playing = false;
+let w, h;
+let userHasInteracted = false; // ** Flag to track user interaction for audio context
+
+// --- Configurable Parameters ---
+let config = {};
+
+// --- Particle Systems & Background ---
+let particleSystems = {};
+let stars = [];
+
+// --- Presets ---
+const presets = {
+    "default": {
+        symmetry: 12, layers: 5, points: 512, speedFactor: 1.0, hueSpeed: 0.32, glow: 0.7,
+        paletteA: '#ff6ec7', paletteB: '#2ef0ff', currentVisual: 'mandala', background: 'gradient'
+    },
+    "cosmicWeb": { symmetry: 6, layers: 8, points: 1024, speedFactor: 0.5, hueSpeed: 0.1, glow: 0.8, paletteA: '#ff85a1', paletteB: '#a1c4fd', currentVisual: 'mandala', background: 'starfield' },
+    "toxicStorm": { symmetry: 7, layers: 4, points: 128, speedFactor: 1.5, hueSpeed: 0.8, glow: 0.6, paletteA: '#d4ff7d', paletteB: '#7dffff', currentVisual: 'mandala', background: 'gradient' },
+    "fireflyCave": { speedFactor: 0.8, hueSpeed: 0.2, glow: 0.9, paletteA: '#ffee93', paletteB: '#a0e7e5', currentVisual: 'particleRing', background: 'starfield' },
+    "oceanic": { speedFactor: 1, hueSpeed: 0.05, glow: 0.5, paletteA: '#2193b0', paletteB: '#6dd5ed', currentVisual: 'rain', background: 'gradient' },
+    "inferno": { speedFactor: 1.2, hueSpeed: 0.1, glow: 0.4, paletteA: '#ff4e00', paletteB: '#ec9f05', currentVisual: 'fire', background: 'gradient' },
+};
+
+// --- p5.js Core Functions ---
+function setup(){
+    w = windowWidth; h = windowHeight;
+    const cnv = createCanvas(w, h);
+    cnv.style('display','block');
+    pixelDensity(min(2, devicePixelRatio || 1));
+
+    trailGraphics = createGraphics(w, h);
+    trailGraphics.pixelDensity(1);
+
+    colorMode(HSB, 360, 100, 100, 255);
+    noFill();
+
+    fft = new p5.FFT(0.9, 1024);
+
+    particleSystems.rain = new ParticleSystem(Raindrop);
+    particleSystems.fire = new ParticleSystem(FireParticle);
+    particleSystems.ring = new ParticleSystem(() => new RingParticle(particleSystems.ring.particles.length));
+
+    for (let i = 0; i < 200; i++) {
+        stars.push({x: random(w), y: random(h), size: random(0.5, 2)});
+    }
+    setupUI();
+    applyPreset('default', true);
+}
+
+function draw(){
+    const t = millis() * 0.001;
+
+    // Analyze audio ONLY if the user has interacted, otherwise we get zeroes.
+    let audioData = { bass: 0, mid: 0, treble: 0, spectrum: [] };
+    if (userHasInteracted) {
+        fft.analyze();
+        audioData = {
+            bass: fft.getEnergy('bass'),
+            mid: fft.getEnergy('mid'),
+            treble: fft.getEnergy('treble'),
+            spectrum: fft.waveform()
+        };
+    }
+
+
+    drawBackground(audioData);
+
+    switch (config.currentVisual) {
+        case 'mandala': drawMandala(t, audioData); break;
+        case 'rain':
+            if (playing || useMic) {
+                let rainCount = map(audioData.bass, 0, 255, 0, 5);
+                for (let i = 0; i < rainCount; i++) particleSystems.rain.addParticle();
+            }
+            particleSystems.rain.run(t, audioData);
+            break;
+        case 'fire':
+            if (playing || useMic) {
+                let fireCount = map(audioData.mid, 0, 255, 0, 8);
+                for (let i = 0; i < fireCount; i++) particleSystems.fire.addParticle();
+            }
+            blendMode(ADD);
+            particleSystems.fire.run(t, audioData);
+            blendMode(BLEND);
+            break;
+        case 'particleRing':
+             if (particleSystems.ring.particles.length < 300 && (playing || useMic)) {
+                particleSystems.ring.addParticle();
+             }
+             particleSystems.ring.run(t, audioData);
+             break;
+    }
+}
+
+function windowResized(){
+    resizeCanvas(windowWidth, windowHeight);
+    w = windowWidth; h = windowHeight;
+    trailGraphics = createGraphics(w, h);
+    trailGraphics.pixelDensity(1);
+    stars = [];
+    for (let i = 0; i < 200; i++) {
+        stars.push({x: random(w), y: random(h), size: random(0.5, 2)});
+    }
+}
+
+// --- Background Drawing ---
+function drawBackground(audioData) {
+    if (config.background === 'gradient') {
+        let bg1 = color(config.paletteA);
+        let bg2 = color(config.paletteB);
+        let gradColor = lerpColor(bg1, bg2, 0.7);
+        gradColor.setAlpha(255);
+        background(0,0,10);
+        let from = color(red(gradColor), green(gradColor), blue(gradColor), 50);
+        let to = color(0,0,10, 0);
+        noStroke();
+        for(let i = 1; i > 0; i -= 0.02){
+          fill(lerpColor(from, to, 1-i));
+          ellipse(width/2, height/2, width*i, height*i);
+        }
+    } else {
+        background(6, 6, 23);
+        const trebleGlow = map(audioData.treble, 0, 255, 0.5, 2);
+        noStroke();
+        for (const star of stars) {
+            const starColor = color(255, 255, 255, random(100, 200));
+            fill(starColor);
+            ellipse(star.x, star.y, star.size * trebleGlow, star.size * trebleGlow);
+        }
+    }
+}
+
+
+// --- UI Setup & Handlers ---
+function setupUI() {
+    const connect = (id, event, callback) => document.getElementById(id).addEventListener(event, (e) => callback(e.target.value, e.target));
+    connect('file', 'change', handleFile);
+    connect('playBtn', 'click', togglePlay);
+    connect('micBtn', 'click', toggleMic);
+    connect('snap', 'click', () => saveCanvas('mesmeric_visuals', 'png'));
+    connect('toggleControls', 'click', toggleControls);
+    document.addEventListener('keydown', (e) => { if(e.key.toLowerCase() === 'h') toggleControls(); });
+
+    const connectConfig = (id, key, valId, formatFn = v => v) => {
+        connect(id, 'input', (v) => {
+            config[key] = isNaN(Number(v)) ? v : Number(v);
+            if(valId) document.getElementById(valId).textContent = formatFn(config[key]);
+            if (key === 'paletteA' || key === 'paletteB') syncAccent();
+        });
+    };
+
+    connectConfig('sym', 'symmetry', 'symVal', v => v.toFixed(0));
+    connectConfig('layers', 'layers', 'layersVal', v => v.toFixed(0));
+    connectConfig('points', 'points', 'pointsVal', v => v.toFixed(0));
+    connectConfig('speed', 'speedFactor', 'speedVal', v => v.toFixed(2));
+    connectConfig('hueSpeed', 'hueSpeed', 'hueVal', v => v.toFixed(2));
+    connectConfig('glow', 'glow', 'glowVal', v => v.toFixed(2));
+    connectConfig('colA', 'paletteA');
+    connectConfig('colB', 'paletteB');
+
+    connect('visuals', 'change', (v) => {
+        config.currentVisual = v;
+        document.getElementById('paramsMandala').style.display = (v === 'mandala') ? 'flex' : 'none';
+    });
+    connect('background', 'change', (v) => config.background = v);
+
+    const presetsSelect = document.getElementById('presets');
+    for(const name in presets) {
+        if(name === 'default') continue;
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        presetsSelect.appendChild(option);
+    }
+    connect('presets', 'change', (name) => applyPreset(name));
+}
+
+function toggleControls(){
+    const container = document.getElementById('controlsContainer');
+    container.classList.toggle('controls-hidden');
+    document.getElementById('toggleControls').textContent = container.classList.contains('controls-hidden') ? 'Show Controls' : 'Hide Controls';
+}
+
+function applyPreset(name, isInitial = false) {
+    if (!presets[name]) return;
+
+    // This robust approach ensures no old settings linger.
+    const presetConf = presets[name];
+    config = { ...presets.default, ...presetConf };
+
+    const updateEl = (id, value) => {
+        const el = document.getElementById(id);
+        if(el) el.value = value;
+    };
+    updateEl('sym', config.symmetry);
+    updateEl('layers', config.layers);
+    updateEl('points', config.points);
+    updateEl('speed', config.speedFactor);
+    updateEl('hueSpeed', config.hueSpeed);
+    updateEl('glow', config.glow);
+    updateEl('colA', config.paletteA);
+    updateEl('colB', config.paletteB);
+    updateEl('visuals', config.currentVisual);
+    updateEl('background', config.background);
+    if(!isInitial) { updateEl('presets', name); }
+
+    document.getElementById('symVal').textContent = config.symmetry.toFixed(0);
+    document.getElementById('layersVal').textContent = config.layers.toFixed(0);
+    document.getElementById('pointsVal').textContent = config.points.toFixed(0);
+    document.getElementById('speedVal').textContent = config.speedFactor.toFixed(2);
+    document.getElementById('hueVal').textContent = config.hueSpeed.toFixed(2);
+    document.getElementById('glowVal').textContent = config.glow.toFixed(2);
+    document.getElementById('paramsMandala').style.display = (config.currentVisual === 'mandala') ? 'flex' : 'none';
+    syncAccent();
+}
+
+// --- Audio Handling ---
+// ** Central function to initialize audio context on user gesture
+function initAudio() {
+    if (!userHasInteracted) {
+        userStartAudio(); // This is a p5.js function that starts the AudioContext
+        userHasInteracted = true;
+        console.log("Audio context started by user.");
+    }
+}
+
+async function handleFile(val, el){
+    initAudio(); // Ensure audio context is running
+    const f = el.files[0];
+    if(!f) return;
+    if(useMic) await stopMic();
+    if(audioFile && audioFile.isPlaying()) audioFile.stop();
+    const url = URL.createObjectURL(f);
+    loadSound(url, (s)=>{
+        if(audioFile) audioFile.disconnect();
+        audioFile = s;
+        fft.setInput(audioFile);
+        audioFile.loop();
+        playing = true;
+        document.getElementById('playBtn').textContent = 'Pause';
+    }, (err)=>{ alert('Could not load audio: '+err); });
+}
+
+function togglePlay(){
+    initAudio(); // Ensure audio context is running
+    if(!audioFile) {
+        alert("Please select an audio file first.");
+        return;
+    }
+    if(audioFile.isPlaying()){
+        audioFile.pause(); playing=false;
+        document.getElementById('playBtn').textContent = 'Play';
+    } else {
+        if (useMic) stopMic();
+        audioFile.play(); playing=true;
+        document.getElementById('playBtn').textContent = 'Pause';
+    }
+}
+
+async function toggleMic(){
+    initAudio(); // Ensure audio context is running
+    if(!useMic){
+        if(audioFile && audioFile.isPlaying()) {
+            audioFile.pause();
+            playing = false;
+            document.getElementById('playBtn').textContent = 'Play';
+        }
+        try{
+            mic = new p5.AudioIn();
+            await mic.start();
+            fft.setInput(mic);
+            useMic = true;
+            document.getElementById('micBtn').textContent = 'Stop Mic';
+        }catch(e){ alert('Microphone access denied'); }
+    } else {
+        await stopMic();
+    }
+}
+
+async function stopMic(){
+    if(mic){ mic.stop(); mic = null; }
+    if(audioFile) fft.setInput(audioFile);
+    else fft.setInput();
+    useMic = false;
+    document.getElementById('micBtn').textContent = 'Start Mic';
+}
+
+// --- Visualizers ---
+function drawMandala(t, audioData){
+  const maxR = min(w, h) * 0.42;
+
+  trailGraphics.clear();
+  const fadeAlpha = map(config.glow, 0, 1, 40, 8);
+  trailGraphics.background(0, fadeAlpha);
+
+  trailGraphics.push();
+  trailGraphics.translate(w/2, h/2);
+  trailGraphics.angleMode(RADIANS);
+  trailGraphics.colorMode(HSB, 360, 100, 100, 255);
+  trailGraphics.noFill();
+
+  for(let L = 0; L < config.layers; L++){
+    const layerNorm = config.layers <= 1 ? 1 : L / (config.layers-1);
+    const layerScale = lerp(0.38, 1.0, layerNorm);
+    const baseRadius = maxR * layerScale * (0.5 + 0.5 * sin(t*0.4 + L*0.6));
+    const wobbles = 2 + L * 0.6;
+    const layerSpeed = (0.18 + L*0.06) * config.speedFactor * (1 + 0.2 * sin(t*0.3 + L));
+    const thickness = map(layerNorm, 0,1, 0.6, 2.4);
+    const hueOffset = (t*20* config.hueSpeed + L*32) % 360;
+
+    const mixT = (0.25 + 0.75 * layerNorm + 0.15 * sin(t*0.7 + L));
+    const hsb = mixHSB(config.paletteA, config.paletteB, constrain(mixT,0,1));
+    const layerHue = (hsb.h + hueOffset) % 360;
+    const layerSat = constrain(hsb.s + 8* sin(t*0.6 + L), 40, 100);
+    const layerBri = constrain(hsb.br + 6* cos(t*0.4 + L), 30, 100);
+
+    trailGraphics.stroke(layerHue, layerSat, layerBri, 255);
+    trailGraphics.strokeWeight(1.2 * thickness);
+
+    trailGraphics.beginShape();
+    for(let i=0; i<=config.points; i++){
+      const a = i / config.points * TWO_PI * config.symmetry;
+      const wave =
+         0.35 * sin(wobbles * a + t*layerSpeed*1.0 + L*0.3)
+       + 0.20 * sin((wobbles*1.8) * a - t*layerSpeed*0.6 + L*0.8)
+       + 0.12 * sin((wobbles*0.7) * a + t*layerSpeed*1.6 + L*0.4);
+
+      const audioAmp = 0.4 * (audioData.bass/255) * (1 + layerNorm) + 0.6 * (audioData.mid/255) * (0.8 + 0.4*layerNorm) + 0.25 * (audioData.treble/255);
+      const radial = baseRadius * (1 + wave * (0.18 + 0.6*layerNorm) * audioAmp);
+      const breathe = 1 + 0.06 * sin(t*0.7 + L*1.3 + i*0.002);
+      const r = radial * breathe;
+      const x = r * cos(a + L*0.02 * sin(t*0.3 + i*0.001));
+      const y = r * sin(a + L*0.02 * sin(t*0.3 + i*0.001));
+      trailGraphics.curveVertex(x, y);
+    }
+    trailGraphics.endShape(CLOSE);
+  }
+  trailGraphics.pop();
+
+  push();
+  blendMode(ADD);
+  image(trailGraphics, 0, 0);
+  pop();
+
+  push();
+  const centerHue = ( (millis()*0.01*config.hueSpeed) % 360 );
+  const pulse = map(audioData.mid, 0, 255, min(w,h)*0.006, min(w,h)*0.08);
+  noStroke();
+  fill(centerHue, 80, 80, 210);
+  ellipse(w/2, h/2, pulse, pulse);
+  pop();
+}
+
+// --- Particle Classes & Systems ---
+class Particle {
+    constructor(x, y) { this.pos = createVector(x, y); this.vel = createVector(); this.acc = createVector(); this.lifespan = 255; }
+    isDead() { return this.lifespan < 0; }
+    update() { this.vel.add(this.acc); this.pos.add(this.vel); this.lifespan -= 2; }
+}
+
+class Raindrop extends Particle {
+    constructor() { super(random(width), random(-height, 0)); this.vel.set(0, random(4, 10)); }
+    display() {
+        const hsb = mixHSB(config.paletteA, config.paletteB, 0.7);
+        stroke(hsb.h, hsb.s, hsb.br, this.lifespan);
+        strokeWeight(random(1, 3)); line(this.pos.x, this.pos.y, this.pos.x, this.pos.y + 10);
+    }
+    update() { super.update(); if (this.pos.y > height) this.lifespan = 0; }
+}
+
+class FireParticle extends Particle {
+    constructor() { super(random(width), height); this.vel.set(random(-1, 1), random(-3, -1)); this.size = random(10, 30); this.noiseOffset = random(1000); }
+    display() { const hsb = mixHSB(config.paletteA, config.paletteB, this.lifespan / 255); noStroke(); fill(hsb.h, hsb.s, hsb.br, this.lifespan); ellipse(this.pos.x, this.pos.y, this.size, this.size); }
+    update(t) {
+        let noiseForce = (noise(this.pos.x * 0.01, this.pos.y * 0.01, this.noiseOffset + t * config.speedFactor) - 0.5) * 2;
+        this.vel.x += noiseForce;
+        super.update();
+        this.size *= 0.98;
+    }
+}
+
+class RingParticle extends Particle {
+    constructor(index) {
+        super(w / 2, h / 2);
+        this.angle = random(TWO_PI);
+        this.radius = w * 0.1;
+        this.targetRadius = w * 0.1;
+        this.lifespan = 500;
+        this.index = index;
+    }
+    display(t, audioData) {
+        let hueOffset = (t * 20 * config.hueSpeed + this.index * 0.5) % 360;
+        let mixT = (sin(t * 0.5 + this.index * 0.1) + 1) / 2;
+        let hsb = mixHSB(config.paletteA, config.paletteB, mixT);
+        let finalHue = (hsb.h + hueOffset) % 360;
+        let size = map(audioData.treble, 0, 255, 1, 8) + map(this.lifespan, 500, 0, 5, 0);
+
+        push();
+        translate(this.pos.x, this.pos.y);
+        noStroke();
+        fill(finalHue, hsb.s, hsb.br, map(this.lifespan, 500, 0, 200, 0));
+        ellipse(this.radius * cos(this.angle), this.radius * sin(this.angle), size, size);
+        pop();
+    }
+    update(t, audioData) {
+        this.lifespan -= 1;
+        this.angle += (map(audioData.mid, 0, 255, 0, 0.02) + 0.005) * config.speedFactor;
+        this.targetRadius = w * 0.1 + map(audioData.bass, 0, 255, 10, w * 0.2);
+        this.radius = lerp(this.radius, this.targetRadius, 0.1);
+    }
+}
+
+class ParticleSystem {
+    constructor(particleType) { this.particles = []; this.particleType = particleType; }
+    addParticle() { this.particles.push(new this.particleType()); }
+    run(t, audioData) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
+            p.update(t, audioData);
+            p.display(t, audioData);
+            if (p.isDead()) this.particles.splice(i, 1);
+        }
+    }
+}
+
+// --- Utility Functions ---
+function syncAccent() { document.documentElement.style.setProperty('--accentA', config.paletteA); document.documentElement.style.setProperty('--accentB', config.paletteB); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function map(v, a, b, c, d) { return (v - a) / (b - a) * (d - c) + c; }
+function constrain(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function hexToRgb(hex) { hex = hex.replace('#', ''); return { r: parseInt(hex.substring(0, 2), 16), g: parseInt(hex.substring(2, 4), 16), b: parseInt(hex.substring(4, 6), 16) }; }
+function rgbToHsbObj(r, g, b) { colorMode(RGB, 255); const c = color(r, g, b); colorMode(HSB, 360, 100, 100); return { h: hue(c), s: saturation(c), b: brightness(c) }; }
+function mixHSB(aHex, bHex, t) {
+    const a = hexToRgb(aHex), b = hexToRgb(bHex);
+    const ah = rgbToHsbObj(a.r, a.g, a.b), bh = rgbToHsbObj(b.r, b.g, b.b);
+    let dh = bh.h - ah.h;
+    if (dh > 180) dh -= 360; else if (dh < -180) dh += 360;
+    const h = (ah.h + dh * t + 360) % 360;
+    const s = ah.s + (bh.s - ah.s) * t;
+    const br = ah.b + (bh.b - ah.b) * t;
+    return { h, s, br };
+}
+
+</script>
+</body>
+</html> -->
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mesmeric Mandala — Evolved (Stable)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&family=Orbitron:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#060617; --bg2:#00102a;
+    --accentA:#ff6ec7; --accentB:#2ef0ff;
+    --panel-bg:linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    --panel-border:rgba(255,255,255,0.05);
+  }
+  html,body{height:100%;margin:0;background:var(--bg1);font-family:Inter,system-ui,Arial;color:#fff;overflow:hidden}
+  canvas{display:block}
+  .hint{position:fixed;left:14px;top:12px;font-size:13px;color:rgba(255,255,255,0.85);z-index:999}
+
+  .controls-container{
+    position:fixed;
+    left:12px; bottom:12px;
+    z-index:1000;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  #toggleControls{
+    margin-bottom:8px;
+    padding:8px 16px;
+  }
+  .panel{
+    display:flex; gap:12px; align-items:stretch;
+    padding:10px 14px; border-radius:14px;
+    background:var(--panel-bg);
+    backdrop-filter: blur(10px) saturate(120%); box-shadow:0 10px 30px rgba(0,0,0,0.45);
+    border:1px solid var(--panel-border);
+    flex-wrap:wrap;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .controls-hidden .panel{
+      opacity:0;
+      pointer-events:none;
+      transform: translateY(20px);
+  }
+
+  fieldset{
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px;
+    padding:8px 12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  legend{
+    font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;
+    opacity:0.7; padding: 0 4px;
+  }
+
+  .group{display:flex;align-items:center;gap:8px}
+  label{font-size:12px;min-width:68px;opacity:0.9; cursor:help;}
+  input[type=range]{width:130px}
+  .value{font-family:Orbitron,monospace;font-size:12px;min-width:44px;text-align:right}
+
+  button.btn, select{
+    background:linear-gradient(135deg,var(--accentA),var(--accentB));
+    border:none;padding:8px 12px;border-radius:8px;color:#021826;
+    font-weight:700;cursor:pointer; font-family:Inter; font-size:12px;
+  }
+  button.icon{
+    width:38px;height:38px;border-radius:50%;display:inline-grid;place-items:center;
+    padding:0;border:none;cursor:pointer;
+    background:linear-gradient(135deg,var(--accentA),var(--accentB));
+  }
+  input[type=color]{width:36px;height:36px;border-radius:8px;border:none;padding:0;cursor:pointer}
+  .small{font-size:11px;opacity:0.85}
+  @media (max-width:820px){
+    .panel{flex-direction:column; align-items:center;}
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+</head>
+<body>
+  <div class="hint">Mesmeric Mandala Evolved — press <b>H</b> to hide/show controls</div>
+
+  <div class="controls-container" id="controlsContainer">
+    <button class="btn" id="toggleControls">Hide Controls</button>
+    <div class="panel">
+      <fieldset>
+        <legend>Presets & Audio</legend>
+        <div class="group">
+          <label title="Load pre-defined settings">Presets</label>
+          <select id="presets"></select>
+        </div>
+        <div class="group">
+            <label title="Load your own audio file">Audio</label>
+            <input id="file" type="file" accept="audio/*" style="width:130px" />
+        </div>
+        <div class="group">
+            <label title="Start/Stop audio playback">Playback</label>
+            <button class="btn" id="playBtn">Play</button>
+            <button class="icon" id="snap" title="Save image as PNG">📸</button>
+        </div>
+        <div class="group">
+          <label class="small" title="Use your microphone as an audio source">Mic</label>
+          <button class="btn" id="micBtn">Start Mic</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Visual Style</legend>
+        <div class="group">
+          <label title="Choose the main visualizer">Visual</label>
+          <select id="visuals">
+            <option value="mandala">Mandala</option>
+            <option value="fireflies">Fireflies</option>
+            <option value="rain">Falling Rain</option>
+            <option value="fire">Fire Storm</option>
+          </select>
+        </div>
+        <div class="group">
+            <label title="Choose the background style">Background</label>
+            <select id="background">
+              <option value="gradient">Gradient</option>
+              <option value="starfield">Starfield</option>
+            </select>
+        </div>
+        <div class="group">
+          <label title="Primary color for the visual palette">Palette A</label>
+          <input id="colA" type="color" value="#ff6ec7" />
+        </div>
+        <div class="group">
+          <label title="Secondary color for the visual palette">Palette B</label>
+          <input id="colB" type="color" value="#2ef0ff" />
+        </div>
+      </fieldset>
+
+       <fieldset id="paramsMandala">
+        <legend>Parameters (Mandala)</legend>
+        <div class="group">
+            <label title="Number of rotational symmetries">Symmetry</label>
+            <input id="sym" type="range" min="3" max="36" value="12" />
+            <div class="value" id="symVal">12</div>
+        </div>
+        <div class="group">
+            <label title="Number of concentric layers">Layers</label>
+            <input id="layers" type="range" min="1" max="10" value="5" />
+            <div class="value" id="layersVal">5</div>
+        </div>
+        <div class="group">
+            <label title="Smoothness vs. complexity of shapes">Detail</label>
+            <input id="points" type="range" min="64" max="2048" step="8" value="512" />
+            <div class="value" id="pointsVal">512</div>
+        </div>
+       </fieldset>
+
+       <fieldset id="paramsShared">
+         <legend>Parameters (General)</legend>
+         <div class="group">
+            <label title="Overall animation speed">Speed</label>
+            <input id="speed" type="range" min="0.1" max="3" step="0.05" value="1" />
+            <div class="value" id="speedVal">1.00</div>
+        </div>
+        <div class="group">
+            <label title="How fast the colors cycle">Hue Shift</label>
+            <input id="hueSpeed" type="range" min="0" max="2" step="0.01" value="0.32" />
+            <div class="value" id="hueVal">0.32</div>
+        </div>
+        <div class="group">
+            <label title="Length of the motion trails">Glow</label>
+            <input id="glow" type="range" min="0" max="1" step="0.01" value="0.7" />
+            <div class="value" id="glowVal">0.70</div>
+        </div>
+       </fieldset>
+    </div>
+  </div>
+
+<script>
+// --- Global State ---
+let trailGraphics;
+let fft, audioFile, mic;
+let useMic = false, playing = false;
+let w, h;
+let userHasInteracted = false;
+
+// --- Configurable Parameters ---
+let config = {};
+
+// --- Particle Systems & Background ---
+let particleSystems = {};
+let stars = [];
+
+// --- Presets ---
+const presets = {
+    "default": {
+        symmetry: 12, layers: 5, points: 512, speedFactor: 1.0, hueSpeed: 0.32, glow: 0.7,
+        paletteA: '#ff6ec7', paletteB: '#2ef0ff', currentVisual: 'mandala', background: 'gradient'
+    },
+    "cosmicWeb": { symmetry: 6, layers: 8, points: 1024, speedFactor: 0.5, hueSpeed: 0.1, glow: 0.8, paletteA: '#ff85a1', paletteB: '#a1c4fd', currentVisual: 'mandala', background: 'starfield' },
+    "toxicStorm": { symmetry: 7, layers: 4, points: 128, speedFactor: 1.5, hueSpeed: 0.8, glow: 0.6, paletteA: '#d4ff7d', paletteB: '#7dffff', currentVisual: 'mandala', background: 'gradient' },
+    "fireflyCave": { speedFactor: 0.4, hueSpeed: 0.2, glow: 0.9, paletteA: '#ffee93', paletteB: '#a0e7e5', currentVisual: 'fireflies', background: 'starfield' },
+    "oceanic": { speedFactor: 1, hueSpeed: 0.05, glow: 0.5, paletteA: '#2193b0', paletteB: '#6dd5ed', currentVisual: 'rain', background: 'gradient' },
+    "inferno": { speedFactor: 1.2, hueSpeed: 0.1, glow: 0.4, paletteA: '#ff4e00', paletteB: '#ec9f05', currentVisual: 'fire', background: 'gradient' },
+};
+
+// --- p5.js Core Functions ---
+function setup(){
+    w = windowWidth; h = windowHeight;
+    const cnv = createCanvas(w, h);
+    cnv.style('display','block');
+    pixelDensity(min(2, devicePixelRatio || 1));
+
+    trailGraphics = createGraphics(w, h);
+    trailGraphics.pixelDensity(1);
+
+    colorMode(HSB, 360, 100, 100, 255);
+    noFill();
+
+    fft = new p5.FFT(0.9, 1024);
+
+    particleSystems.rain = new ParticleSystem(Raindrop);
+    particleSystems.fire = new ParticleSystem(FireParticle);
+    particleSystems.fireflies = new ParticleSystem(FireflyParticle);
+
+    for (let i = 0; i < 200; i++) {
+        stars.push({x: random(w), y: random(h), size: random(0.5, 2)});
+    }
+    setupUI();
+    applyPreset('default', true);
+}
+
+function draw(){
+    const t = millis() * 0.001;
+
+    let audioData = { bass: 0, mid: 0, treble: 0, spectrum: [] };
+    if (userHasInteracted) {
+        fft.analyze();
+        audioData = {
+            bass: fft.getEnergy('bass'),
+            mid: fft.getEnergy('mid'),
+            treble: fft.getEnergy('treble'),
+            spectrum: fft.waveform()
+        };
+    }
+
+    drawBackground(audioData);
+
+    switch (config.currentVisual) {
+        case 'mandala': drawMandala(t, audioData); break;
+        case 'rain':
+            if (playing || useMic) {
+                let rainCount = map(audioData.bass, 0, 255, 0, 5);
+                for (let i = 0; i < rainCount; i++) particleSystems.rain.addParticle();
+            }
+            particleSystems.rain.run(t, audioData);
+            break;
+        case 'fire':
+            if (playing || useMic) {
+                let fireCount = map(audioData.mid, 0, 255, 0, 8);
+                for (let i = 0; i < fireCount; i++) particleSystems.fire.addParticle();
+            }
+            blendMode(ADD);
+            particleSystems.fire.run(t, audioData);
+            blendMode(BLEND);
+            break;
+        case 'fireflies':
+             if ((playing || useMic) && audioData.mid > 100 && particleSystems.fireflies.particles.length < 150) {
+                 particleSystems.fireflies.addParticle();
+             }
+             particleSystems.fireflies.run(t, audioData);
+             break;
+    }
+}
+
+function windowResized(){
+    resizeCanvas(windowWidth, windowHeight);
+    w = windowWidth; h = windowHeight;
+    trailGraphics = createGraphics(w, h);
+    trailGraphics.pixelDensity(1);
+    stars = [];
+    for (let i = 0; i < 200; i++) {
+        stars.push({x: random(w), y: random(h), size: random(0.5, 2)});
+    }
+}
+
+// --- Background Drawing ---
+function drawBackground(audioData) {
+    if (config.background === 'gradient') {
+        let bg1 = color(config.paletteA);
+        let bg2 = color(config.paletteB);
+        let gradColor = lerpColor(bg1, bg2, 0.7);
+        gradColor.setAlpha(255);
+        background(0,0,10);
+        let from = color(red(gradColor), green(gradColor), blue(gradColor), 50);
+        let to = color(0,0,10, 0);
+        noStroke();
+        for(let i = 1; i > 0; i -= 0.02){
+          fill(lerpColor(from, to, 1-i));
+          ellipse(width/2, height/2, width*i, height*i);
+        }
+    } else {
+        background(6, 6, 23);
+        const trebleGlow = map(audioData.treble, 0, 255, 0.5, 2);
+        noStroke();
+        for (const star of stars) {
+            const starColor = color(255, 255, 255, random(100, 200));
+            fill(starColor);
+            ellipse(star.x, star.y, star.size * trebleGlow, star.size * trebleGlow);
+        }
+    }
+}
+
+// --- UI Setup & Handlers ---
+function setupUI() {
+    const connect = (id, event, callback) => document.getElementById(id).addEventListener(event, (e) => callback(e.target.value, e.target));
+    connect('file', 'change', handleFile);
+    connect('playBtn', 'click', togglePlay);
+    connect('micBtn', 'click', toggleMic);
+    connect('snap', 'click', () => saveCanvas('mesmeric_visuals', 'png'));
+    connect('toggleControls', 'click', toggleControls);
+    document.addEventListener('keydown', (e) => { if(e.key.toLowerCase() === 'h') toggleControls(); });
+
+    const connectConfig = (id, key, valId, formatFn = v => v) => {
+        connect(id, 'input', (v) => {
+            config[key] = isNaN(Number(v)) ? v : Number(v);
+            if(valId) document.getElementById(valId).textContent = formatFn(config[key]);
+            if (key === 'paletteA' || key === 'paletteB') syncAccent();
+        });
+    };
+
+    connectConfig('sym', 'symmetry', 'symVal', v => v.toFixed(0));
+    connectConfig('layers', 'layers', 'layersVal', v => v.toFixed(0));
+    connectConfig('points', 'points', 'pointsVal', v => v.toFixed(0));
+    connectConfig('speed', 'speedFactor', 'speedVal', v => v.toFixed(2));
+    connectConfig('hueSpeed', 'hueSpeed', 'hueVal', v => v.toFixed(2));
+    connectConfig('glow', 'glow', 'glowVal', v => v.toFixed(2));
+    connectConfig('colA', 'paletteA');
+    connectConfig('colB', 'paletteB');
+
+    connect('visuals', 'change', (v) => {
+        config.currentVisual = v;
+        document.getElementById('paramsMandala').style.display = (v === 'mandala') ? 'flex' : 'none';
+    });
+    connect('background', 'change', (v) => config.background = v);
+
+    const presetsSelect = document.getElementById('presets');
+    for(const name in presets) {
+        if(name === 'default') continue;
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        presetsSelect.appendChild(option);
+    }
+    connect('presets', 'change', (name) => applyPreset(name));
+}
+
+function toggleControls(){
+    const container = document.getElementById('controlsContainer');
+    container.classList.toggle('controls-hidden');
+    document.getElementById('toggleControls').textContent = container.classList.contains('controls-hidden') ? 'Show Controls' : 'Hide Controls';
+}
+
+function applyPreset(name, isInitial = false) {
+    if (!presets[name]) return;
+    const presetConf = presets[name];
+    config = { ...presets.default, ...presetConf };
+
+    const updateEl = (id, value) => {
+        const el = document.getElementById(id);
+        if(el) el.value = value;
+    };
+    updateEl('sym', config.symmetry);
+    updateEl('layers', config.layers);
+    updateEl('points', config.points);
+    updateEl('speed', config.speedFactor);
+    updateEl('hueSpeed', config.hueSpeed);
+    updateEl('glow', config.glow);
+    updateEl('colA', config.paletteA);
+    updateEl('colB', config.paletteB);
+    updateEl('visuals', config.currentVisual);
+    updateEl('background', config.background);
+    if(!isInitial) { updateEl('presets', name); }
+
+    document.getElementById('symVal').textContent = config.symmetry.toFixed(0);
+    document.getElementById('layersVal').textContent = config.layers.toFixed(0);
+    document.getElementById('pointsVal').textContent = config.points.toFixed(0);
+    document.getElementById('speedVal').textContent = config.speedFactor.toFixed(2);
+    document.getElementById('hueVal').textContent = config.hueSpeed.toFixed(2);
+    document.getElementById('glowVal').textContent = config.glow.toFixed(2);
+    document.getElementById('paramsMandala').style.display = (config.currentVisual === 'mandala') ? 'flex' : 'none';
+    syncAccent();
+}
+
+// --- Audio Handling ---
+function initAudio() {
+    if (!userHasInteracted) {
+        userStartAudio();
+        userHasInteracted = true;
+    }
+}
+
+async function handleFile(val, el){
+    initAudio();
+    const f = el.files[0];
+    if(!f) return;
+    if(useMic) await stopMic();
+    if(audioFile && audioFile.isPlaying()) audioFile.stop();
+    const url = URL.createObjectURL(f);
+    loadSound(url, (s)=>{
+        if(audioFile) audioFile.disconnect();
+        audioFile = s;
+        fft.setInput(audioFile);
+        audioFile.loop();
+        playing = true;
+        document.getElementById('playBtn').textContent = 'Pause';
+    }, (err)=>{ alert('Could not load audio: '+err); });
+}
+
+function togglePlay(){
+    initAudio();
+    if(!audioFile) {
+        alert("Please select an audio file first.");
+        return;
+    }
+    if(audioFile.isPlaying()){
+        audioFile.pause(); playing=false;
+        document.getElementById('playBtn').textContent = 'Play';
+    } else {
+        if (useMic) stopMic();
+        audioFile.play(); playing=true;
+        document.getElementById('playBtn').textContent = 'Pause';
+    }
+}
+
+async function toggleMic(){
+    initAudio();
+    if(!useMic){
+        if(audioFile && audioFile.isPlaying()) {
+            audioFile.pause();
+            playing = false;
+            document.getElementById('playBtn').textContent = 'Play';
+        }
+        try{
+            mic = new p5.AudioIn();
+            await mic.start();
+            fft.setInput(mic);
+            useMic = true;
+            document.getElementById('micBtn').textContent = 'Stop Mic';
+        }catch(e){ alert('Microphone access denied'); }
+    } else {
+        await stopMic();
+    }
+}
+
+async function stopMic(){
+    if(mic){ mic.stop(); mic = null; }
+    if(audioFile) fft.setInput(audioFile);
+    else fft.setInput();
+    useMic = false;
+    document.getElementById('micBtn').textContent = 'Start Mic';
+}
+
+// --- Visualizers ---
+function drawMandala(t, audioData){
+  const maxR = min(w, h) * 0.42;
+
+  trailGraphics.clear();
+  const fadeAlpha = map(config.glow, 0, 1, 40, 8);
+  trailGraphics.background(0, fadeAlpha);
+
+  trailGraphics.push();
+  trailGraphics.translate(w/2, h/2);
+  trailGraphics.angleMode(RADIANS);
+  trailGraphics.colorMode(HSB, 360, 100, 100, 255);
+  trailGraphics.noFill();
+
+  for(let L = 0; L < config.layers; L++){
+    const layerNorm = config.layers <= 1 ? 1 : L / (config.layers-1);
+    const layerScale = lerp(0.38, 1.0, layerNorm);
+    const baseRadius = maxR * layerScale * (0.5 + 0.5 * sin(t*0.4 + L*0.6));
+    const wobbles = 2 + L * 0.6;
+    const layerSpeed = (0.18 + L*0.06) * config.speedFactor * (1 + 0.2 * sin(t*0.3 + L));
+    const thickness = map(layerNorm, 0,1, 0.6, 2.4);
+    const hueOffset = (t*20* config.hueSpeed + L*32) % 360;
+
+    const mixT = (0.25 + 0.75 * layerNorm + 0.15 * sin(t*0.7 + L));
+    const hsb = mixHSB(config.paletteA, config.paletteB, constrain(mixT,0,1));
+    const layerHue = (hsb.h + hueOffset) % 360;
+    const layerSat = constrain(hsb.s + 8* sin(t*0.6 + L), 40, 100);
+    const layerBri = constrain(hsb.br + 6* cos(t*0.4 + L), 30, 100);
+
+    trailGraphics.stroke(layerHue, layerSat, layerBri, 255);
+    trailGraphics.strokeWeight(1.2 * thickness);
+
+    trailGraphics.beginShape();
+    for(let i=0; i<=config.points; i++){
+      const a = i / config.points * TWO_PI * config.symmetry;
+      const wave =
+         0.35 * sin(wobbles * a + t*layerSpeed*1.0 + L*0.3)
+       + 0.20 * sin((wobbles*1.8) * a - t*layerSpeed*0.6 + L*0.8)
+       + 0.12 * sin((wobbles*0.7) * a + t*layerSpeed*1.6 + L*0.4);
+
+      const audioAmp = 0.4 * (audioData.bass/255) * (1 + layerNorm) + 0.6 * (audioData.mid/255) * (0.8 + 0.4*layerNorm) + 0.25 * (audioData.treble/255);
+      const radial = baseRadius * (1 + wave * (0.18 + 0.6*layerNorm) * audioAmp);
+      const breathe = 1 + 0.06 * sin(t*0.7 + L*1.3 + i*0.002);
+      const r = radial * breathe;
+      const x = r * cos(a + L*0.02 * sin(t*0.3 + i*0.001));
+      const y = r * sin(a + L*0.02 * sin(t*0.3 + i*0.001));
+      trailGraphics.curveVertex(x, y);
+    }
+    trailGraphics.endShape(CLOSE);
+  }
+  trailGraphics.pop();
+
+  push();
+  blendMode(ADD);
+  image(trailGraphics, 0, 0);
+  pop();
+
+  push();
+  const centerHue = ( (millis()*0.01*config.hueSpeed) % 360 );
+  const pulse = map(audioData.mid, 0, 255, min(w,h)*0.006, min(w,h)*0.08);
+  noStroke();
+  fill(centerHue, 80, 80, 210);
+  ellipse(w/2, h/2, pulse, pulse);
+  pop();
+}
+
+// --- Particle Classes & Systems ---
+class Particle {
+    constructor(x, y) { this.pos = createVector(x, y); this.vel = createVector(); this.acc = createVector(); this.lifespan = 255; }
+    isDead() { return this.lifespan < 0; }
+    update() { this.vel.add(this.acc); this.pos.add(this.vel); this.lifespan -= 2; }
+}
+
+class Raindrop extends Particle {
+    constructor() { super(random(width), random(-height, 0)); this.vel.set(0, random(4, 10)); }
+    display() {
+        const hsb = mixHSB(config.paletteA, config.paletteB, 0.7);
+        stroke(hsb.h, hsb.s, hsb.br, this.lifespan);
+        strokeWeight(random(1, 3)); line(this.pos.x, this.pos.y, this.pos.x, this.pos.y + 10);
+    }
+    update() { super.update(); if (this.pos.y > height) this.lifespan = 0; }
+}
+
+class FireParticle extends Particle {
+    constructor() { super(random(width), height); this.vel.set(random(-1, 1), random(-3, -1)); this.size = random(10, 30); this.noiseOffset = random(1000); }
+    display() { const hsb = mixHSB(config.paletteA, config.paletteB, this.lifespan / 255); noStroke(); fill(hsb.h, hsb.s, hsb.br, this.lifespan); ellipse(this.pos.x, this.pos.y, this.size, this.size); }
+    update(t) {
+        let noiseForce = (noise(this.pos.x * 0.01, this.pos.y * 0.01, this.noiseOffset + t * config.speedFactor) - 0.5) * 2;
+        this.vel.x += noiseForce;
+        super.update();
+        this.size *= 0.98;
+    }
+}
+
+class FireflyParticle extends Particle {
+    constructor() {
+        super(random(width), random(height));
+        this.lifespan = random(200, 500);
+        this.noiseOffsetX = random(1000);
+        this.noiseOffsetY = random(1000);
+        this.size = random(2, 5);
+    }
+
+    display(t) {
+        let pulse = (sin(t * config.speedFactor + this.noiseOffsetY) + 1) / 2;
+        let brightness = map(pulse, 0, 1, 60, 100);
+        let alpha = map(this.lifespan, 500, 0, 200, 0) * pulse;
+        let currentSize = this.size + map(pulse, 0, 1, -1, 2);
+
+        const hsb = mixHSB(config.paletteA, config.paletteB, 0.2);
+        noStroke();
+        fill(hsb.h, hsb.s, brightness, alpha);
+        ellipse(this.pos.x, this.pos.y, currentSize, currentSize);
+    }
+
+    update(t) {
+        let vx = map(noise(this.noiseOffsetX + t * 0.1), 0, 1, -0.5, 0.5);
+        let vy = map(noise(this.noiseOffsetY + t * 0.1), 0, 1, -0.5, 0.5);
+        this.pos.add(vx, vy);
+
+        if (this.pos.x > width + 5) this.pos.x = -5;
+        if (this.pos.x < -5) this.pos.x = width + 5;
+        if (this.pos.y > height + 5) this.pos.y = -5;
+        if (this.pos.y < -5) this.pos.y = height + 5;
+
+        this.lifespan -= 0.5;
+    }
+}
+
+
+class ParticleSystem {
+    constructor(particleType) { this.particles = []; this.particleType = particleType; }
+    addParticle() { this.particles.push(new this.particleType()); }
+    run(t, audioData) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
+            p.update(t, audioData);
+            p.display(t, audioData);
+            if (p.isDead()) this.particles.splice(i, 1);
+        }
+    }
+}
+
+// --- Utility Functions ---
+function syncAccent() { document.documentElement.style.setProperty('--accentA', config.paletteA); document.documentElement.style.setProperty('--accentB', config.paletteB); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function map(v, a, b, c, d) { return (v - a) / (b - a) * (d - c) + c; }
+function constrain(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function hexToRgb(hex) { hex = hex.replace('#', ''); return { r: parseInt(hex.substring(0, 2), 16), g: parseInt(hex.substring(2, 4), 16), b: parseInt(hex.substring(4, 6), 16) }; }
+function rgbToHsbObj(r, g, b) { colorMode(RGB, 255); const c = color(r, g, b); colorMode(HSB, 360, 100, 100); return { h: hue(c), s: saturation(c), b: brightness(c) }; }
+function mixHSB(aHex, bHex, t) {
+    const a = hexToRgb(aHex), b = hexToRgb(bHex);
+    const ah = rgbToHsbObj(a.r, a.g, a.b), bh = rgbToHsbObj(b.r, b.g, b.b);
+    let dh = bh.h - ah.h;
+    if (dh > 180) dh -= 360; else if (dh < -180) dh += 360;
+    const h = (ah.h + dh * t + 360) % 360;
+    const s = ah.s + (bh.s - ah.s) * t;
+    const br = ah.b + (bh.b - ah.b) * t;
+    return { h, s, br };
+}
+
+</script>
+</body>
+</html>
