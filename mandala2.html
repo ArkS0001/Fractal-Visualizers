@@ -1,0 +1,320 @@
+<!-- <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mandala Music Visualizer</title>
+  <style>
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;color:#fff;background:linear-gradient(180deg,#0f172a,#041022);} 
+    .ui{position:fixed;left:12px;top:12px;background:rgba(255,255,255,0.06);backdrop-filter:blur(6px);padding:12px;border-radius:10px;box-shadow:0 6px 20px rgba(2,6,23,0.6);max-width:320px}
+    .ui h1{font-size:16px;margin:0 0 8px 0}
+    .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    .row label{font-size:13px;min-width:70px}
+    input[type=range]{width:150px}
+    button{background:#06b6d4;border:none;padding:8px 10px;border-radius:8px;color:#042b33;cursor:pointer;font-weight:600}
+    .muted{opacity:0.8;font-size:12px;margin-top:6px}
+    .footer{position:fixed;left:12px;bottom:12px;color:#9fb0c7;font-size:12px}
+    a.inline{color:#7dd3fc}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+</head>
+<body>
+  <div class="ui">
+    <h1>Mandala Music Visualizer</h1>
+    <div class="row">
+      <label>Audio</label>
+      <input id="file" type="file" accept="audio/*">
+    </div>
+    <div class="row">
+      <label>Mic</label>
+      <button id="micBtn">Start Mic</button>
+    </div>
+    <div class="row">
+      <label>Play</label>
+      <button id="playBtn">Play / Pause</button>
+    </div>
+    <div class="row">
+      <label>Petals</label>
+      <input id="petals" type="range" min="3" max="48" value="12">
+    </div>
+    <div class="row">
+      <label>Symmetry</label>
+      <input id="sym" type="range" min="1" max="12" value="6">
+    </div>
+    <div class="row">
+      <label>Sensitivity</label>
+      <input id="sens" type="range" min="0.2" max="3" step="0.05" value="1">
+    </div>
+    <div class="row">
+      <label>Colors</label>
+      <input id="colorA" type="color" value="#ff7ab6">
+      <input id="colorB" type="color" value="#6be3ff">
+    </div>
+    <div class="row">
+      <label>Export</label>
+      <button id="snap">Save PNG</button>
+    </div>
+    <div class="muted">Tip: upload a track or use mic. Use petals + symmetry for different mandalas.</div>
+  </div>
+  <div class="footer">Made with p5.js — <span style="opacity:0.8">Interactive mandala visualizer</span></div>
+
+  <script>
+    let fft, audio, mic;
+    let playing = false;
+    let useMic = false;
+
+    function setup(){
+      const cnv = createCanvas(windowWidth, windowHeight);
+      cnv.style('display','block');
+      fft = new p5.FFT(0.8, 1024);
+      colorMode(RGB);
+      noFill();
+      // UI hooks
+      document.getElementById('file').addEventListener('change', handleFile);
+      document.getElementById('playBtn').addEventListener('click', togglePlay);
+      document.getElementById('micBtn').addEventListener('click', toggleMic);
+      document.getElementById('snap').addEventListener('click', () => saveCanvas('mandala', 'png'));
+      // make audio element for fallback
+      audio = new p5.SoundFile();
+    }
+
+    function windowResized(){
+      resizeCanvas(windowWidth, windowHeight);
+    }
+
+    function handleFile(e){
+      const f = e.target.files[0];
+      if(!f) return;
+      if(useMic){ stopMic(); }
+      if(audio && audio.isLoaded()) audio.stop();
+      const url = URL.createObjectURL(f);
+      if(audio) audio = loadSound(url, () => { audio.play(); playing=true; });
+    }
+
+    function togglePlay(){
+      if(useMic) return; // mic always on when enabled
+      if(!audio || !audio.isLoaded()) return;
+      if(audio.isPlaying()){ audio.pause(); playing=false;} else { audio.play(); playing=true; }
+    }
+
+    async function toggleMic(){
+      if(!useMic){
+        try{
+          mic = new p5.AudioIn();
+          await mic.start();
+          fft.setInput(mic);
+          useMic = true;
+          document.getElementById('micBtn').innerText = 'Stop Mic';
+        }catch(err){ alert('Microphone access denied or not available'); }
+      }else{
+        stopMic();
+      }
+    }
+
+    function stopMic(){
+      if(mic){ mic.stop(); mic = null; }
+      // reattach fft to audio file if present
+      if(audio && audio.isLoaded()) fft.setInput(audio);
+      else fft.setInput();
+      useMic = false;
+      document.getElementById('micBtn').innerText = 'Start Mic';
+    }
+
+    function draw(){
+      background(4,16,34, 220);
+      let w = width, h = height;
+      translate(w/2, h/2);
+
+      // choose input: if mic active, fft already set to mic; else set to audio if loaded
+      if(!useMic){
+        if(audio && audio.isLoaded()) fft.setInput(audio);
+      }
+
+      const spectrum = fft.analyze();
+      const bass = fft.getEnergy('bass');
+      const mid = fft.getEnergy('mid');
+      const treble = fft.getEnergy('treble');
+
+      const petals = Number(document.getElementById('petals').value);
+      const symmetry = Number(document.getElementById('sym').value);
+      const sens = Number(document.getElementById('sens').value);
+      const colA = document.getElementById('colorA').value;
+      const colB = document.getElementById('colorB').value;
+
+      // convert hex to p5 color
+      const cA = color(colA);
+      const cB = color(colB);
+
+      // base radius scaled by bass
+      const baseR = map(bass, 0, 255, 60, min(w,h)*0.45) * sens;
+
+      // draw layered mandala rings
+      const layers = 8;
+      for(let layer=layers; layer>=1; layer--){
+        const t = frameCount * 0.003 * (1 + layer*0.02);
+        push();
+        rotate(t * (layer%2===0 ? 1 : -1));
+        const mix = layer / layers;
+        const interpolated = lerpColor(cA, cB, mix);
+        stroke(red(interpolated), green(interpolated), blue(interpolated), 200 - layer*10);
+        strokeWeight(1.2 + layer*0.6);
+
+        // radial petals
+        beginShape();
+        for(let i=0; i<petals; i++){
+          const angle = map(i, 0, petals, 0, TWO_PI);
+          // sample spectrum at mapped index
+          const idx = floor(map(i,0,petals,0,spectrum.length-1));
+          const s = spectrum[idx] / 255;
+
+          // noise and time wobble
+          const wobble = (noise(i*0.1 + frameCount*0.01, layer*0.2) - 0.5) * 0.6;
+          // radius modulated by spectrum & mid
+          const r = baseR * (0.15 + mix*0.9) * (1 + s * 1.6 + wobble);
+
+          const x = r * cos(angle);
+          const y = r * sin(angle);
+          curveVertex(x, y);
+        }
+        endShape(CLOSE);
+        pop();
+      }
+
+      // overlay rotating spokes that react to treble
+      const spokes = symmetry * 6;
+      for(let s=0; s<spokes; s++){
+        push();
+        rotate((TWO_PI/spokes) * s + frameCount*0.002*(s%2?1:-1));
+        const amp = map(treble, 0, 255, 0.02, 1.2) * sens;
+        strokeWeight(1);
+        const col = lerpColor(cA, cB, (s%2)*0.8);
+        stroke(red(col), green(col), blue(col), 90);
+        line(0, 0, baseR * amp, 0);
+        pop();
+      }
+
+      // center pulse
+      const pulse = map(mid, 0, 255, 8, min(w,h)*0.06) * (0.8 + 0.2*sin(frameCount*0.08));
+      fill(red(cA), green(cA), blue(cA), 140);
+      noStroke();
+      ellipse(0,0,pulse,pulse);
+
+      // subtle grain overlay
+      noFill();
+      stroke(255,255,255,6);
+      strokeWeight(0.6);
+      ellipse(0,0,min(w,h)*0.47);
+    }
+  </script>
+</body>
+</html> -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Majestic Mandala Music Visualizer</title>
+  <style>
+    html,body{height:100%;margin:0;background:#000;color:#fff;font-family:sans-serif;overflow:hidden;}
+    canvas{display:block;}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+</head>
+<body>
+<script>
+let fft, audio, mic;
+let useMic = false;
+
+function setup(){
+  createCanvas(windowWidth, windowHeight);
+  angleMode(DEGREES);
+  fft = new p5.FFT(0.9, 2048);
+  noFill();
+
+  let fileInput = createFileInput(handleFile);
+  fileInput.position(10, 10);
+
+  let micBtn = createButton('Toggle Mic');
+  micBtn.position(10, 40);
+  micBtn.mousePressed(toggleMic);
+}
+
+function handleFile(file){
+  if(file.type === 'audio'){
+    if(audio && audio.isPlaying()) audio.stop();
+    audio = loadSound(file.data, () => {
+      audio.play();
+    });
+  }
+}
+
+function toggleMic(){
+  if(!useMic){
+    mic = new p5.AudioIn();
+    mic.start();
+    fft.setInput(mic);
+    useMic = true;
+  } else {
+    if(mic) mic.stop();
+    useMic = false;
+    if(audio) fft.setInput(audio);
+  }
+}
+
+function draw(){
+  background(0, 20);
+  translate(width/2, height/2);
+
+  if(audio && audio.isPlaying()) fft.setInput(audio);
+  let spectrum = fft.analyze();
+  let wave = fft.waveform();
+
+  let bass = fft.getEnergy('bass');
+  let mid = fft.getEnergy('mid');
+  let treble = fft.getEnergy('treble');
+
+  let layers = 12;
+  let symmetry = 16;
+  let maxR = min(width, height) / 2.2;
+
+  for(let l=0; l<layers; l++){
+    push();
+    rotate(frameCount * 0.2 * (l%2 ? 1 : -1));
+    let rFactor = map(l, 0, layers, 0.2, 1);
+    let hue = map(l, 0, layers, 180, 360);
+    stroke((hue + frameCount) % 360, 80, 100);
+    strokeWeight(1.2);
+    beginShape();
+    for(let i=0; i<symmetry; i++){
+      let angle = map(i, 0, symmetry, 0, 360);
+      let specIndex = floor(map(i, 0, symmetry, 0, spectrum.length-1));
+      let radius = map(spectrum[specIndex], 0, 255, 50, maxR * rFactor);
+      radius += sin(frameCount*2 + i*10) * bass * 0.05;
+      let x = radius * cos(angle);
+      let y = radius * sin(angle);
+      curveVertex(x, y);
+    }
+    endShape(CLOSE);
+    pop();
+  }
+
+  // Intricate central pulse
+  let pulse = map(mid, 0, 255, 20, 200);
+  stroke(255, 200);
+  strokeWeight(2);
+  ellipse(0, 0, pulse);
+
+  // Radiating particle arcs
+  strokeWeight(0.6);
+  for(let a=0; a<360; a+=5){
+    let r = map(sin(frameCount*0.5 + a), -1, 1, pulse, maxR);
+    let alpha = map(treble, 0, 255, 20, 200);
+    stroke(255, alpha);
+    point(r * cos(a), r * sin(a));
+  }
+}
+</script>
+</body>
+</html>
